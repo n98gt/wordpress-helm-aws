@@ -1,0 +1,99 @@
+namespace: ""
+kind: Deployment
+
+image:
+  name: "wordpress"
+  tag: "6.6.2"
+
+nameOverride: ""
+fullnameOverride: ""
+
+extraLabels: {}
+
+progressDeadlineSeconds: 180
+revisionHistoryLimit: 10
+minReadySeconds: 0
+
+#  ---------------------------------------------------------------------------------
+#  requests & limits
+#  ---------------------------------------------------------------------------------
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2000Mi
+  limits:
+    cpu: 1000m
+    memory: 2000Mi
+
+
+#  ---------------------------------------------------------------------------------
+#  env
+#  ---------------------------------------------------------------------------------
+
+env:
+  WORDPRESS_DB_HOST: mysql.default.svc.cluster.local
+  WORDPRESS_DB_USER: root
+  WORDPRESS_DB_NAME: my_database
+  WORDPRESS_TABLE_PREFIX: wordpress_
+
+#  ---------------------------------------------------------------------------------
+#  service
+#  ---------------------------------------------------------------------------------
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30003
+
+portName: http
+
+#  ---------------------------------------------------------------------------------
+#  scaling
+#  ---------------------------------------------------------------------------------
+
+replicaCount: 1
+updateStrategy:
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  type: RollingUpdate
+
+
+#  ---------------------------------------------------------------------------------
+#  healthcheck
+#  ---------------------------------------------------------------------------------
+
+httpStatusPort: 80
+
+terminationGracePeriodSeconds: 30
+
+# Configure the livenessProbe params
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbeParams:
+  initialDelaySeconds: 0 # wait <initialDelaySeconds> seconds before first probe. Default: 0. Min: 0
+  periodSeconds: 10 # make probe every <periodSeconds> seconds. Default 10. Min: 1
+  timeoutSeconds: 1 # Number of seconds before probe times out(fails).  Default 1. Min: 1
+  successThreshold: 1 # min consecutive successes after failed probe to become successful probe.  Default 1. Min: 1 . Must be 1 for Startup and Liveness
+  failureThreshold: 3 # consider check as failed after <failureThreshold> consecutive failes in a row
+  terminationGracePeriodSeconds: 60 # (v1.25+) Override pod-level terminationGracePeriodSeconds — grace period for the kubelet to wait before triggering a shut down of the failed container
+
+#  ---------------------------------------------------------------------------------
+#  affinity rules
+#  ---------------------------------------------------------------------------------
+
+nodeSelector: {}
+
+tolerations: []
+
+
+# Configure the lifecycle
+# Ref: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+lifecycle:
+  preStop:
+    exec:
+      command:
+        - sh
+        - '-c'
+        - sleep 5 && kill -SIGQUIT 1
+
